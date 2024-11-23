@@ -64,6 +64,8 @@ if "user_type" not in st.session_state:
     st.session_state["user_type"] = None
 if "chat_messages" not in st.session_state:
     st.session_state["chat_messages"] = []
+if "properties" not in st.session_state:
+    st.session_state["properties"] = []
 if "user_profile" not in st.session_state:
     st.session_state["user_profile"] = {
         "email": "",
@@ -153,9 +155,52 @@ def profile_page():
 # Placeholder for Offer a House Page
 def offer_a_house_page():
     st.title("Offer a House")
-    st.markdown("This feature is coming soon!")
+    st.markdown("Provide details about your property below:")
     st.session_state["step"] = 1
     st.session_state["user_type"] = None
+
+    # Property details form
+    property_type = st.selectbox("Is this property for Rent, Sale, or Shared Housing?", ["Rent", "Sale", "Shared Housing"])
+    address = st.text_input("Address")
+    size = st.number_input("Size (in sq. meters)", min_value=0)
+    price = st.number_input("Price (€)", min_value=0)
+
+    # Shared housing specific details
+    shared_housing_details = {}
+    if property_type == "Shared Housing":
+        is_student = st.radio("Are you a student?", ["Yes", "No"]) == "Yes"
+        current_people = st.number_input("Number of people currently living in the house", min_value=0, value=0)
+        max_people = st.number_input("Maximum number of people allowed", min_value=current_people + 1)
+        same_sex_pref = st.radio("Same-sex preference?", ["Yes", "No"])
+        shared_housing_details = {
+            "is_student": is_student,
+            "current_people": current_people,
+            "max_people": max_people,
+            "same_sex_pref": same_sex_pref,
+        }
+
+    preferences = st.multiselect(
+        "Preferences",
+        ["Students", "Professionals", "Families", "No preference"]
+    )
+
+    # Save to database button
+    if st.button("Submit"):
+        if address and size and price:
+            # Create new property entry
+            new_property = {
+                "type": property_type,
+                "address": address,
+                "size": size,
+                "price": price,
+                "preferences": preferences,
+                **shared_housing_details,
+            }
+
+            st.session_state["properties"].append(new_property)
+            st.success("Property added successfully!")
+        else:
+            st.error("Please fill in all required fields.")
 
 # Chat Page
 def chat_page():
@@ -261,36 +306,120 @@ def step_by_step_guide():
 # Professional Flow
 def professional_flow():
     st.title("Guide for Professionals")
-    st.write("### Step 1: Understand Your Budget")
-    budget = st.slider("Select your budget range (€)", 500, 5000, (1000, 3000))
-    st.write(f"You selected: €{budget[0]} to €{budget[1]}")
+    st.write("### Step 1: Are you looking to Rent or Buy?")
+    choice = st.radio("Select your preference:", ["Rent", "Buy"])
 
-    if st.button("Next"):
-        st.write("### Step 2: Learn About Mortgages")
-        st.markdown("Navigate to the Financial Tools page to explore mortgage calculators.")
-        if st.button("Go to Financial Tools"):
-            set_page("Financial Tools")
+    if choice:
+        st.write(f"### Step 2: Filter {choice.lower()} options")
+
+        # Adjust price range dynamically
+        if choice == "Rent":
+            price_label = "Price per Month (€)"
+            price_min_default = 0
+            price_max_default = 4000
+        elif choice == "Buy":
+            price_label = "Price (€)"
+            price_min_default = 0
+            price_max_default = 1_000_000
+
+        # Filter inputs
+        price_min = st.number_input(f"Minimum {price_label}", min_value=0, value=price_min_default)
+        price_max = st.number_input(f"Maximum {price_label}", min_value=0, value=price_max_default)
+        size_min = st.number_input("Minimum Size (sq. meters)", min_value=0, value=0)
+        size_max = st.number_input("Maximum Size (sq. meters)", min_value=0, value=300)
+
+        # Find matching properties
+        if st.button("Find Matches"):
+            if "properties" in st.session_state:
+                # Filter properties
+                matching_properties = [
+                    prop for prop in st.session_state["properties"]
+                    if prop["type"].lower() == choice.lower()  # Match Rent/Buy
+                       and price_min <= prop["price"] <= price_max  # Match price range
+                       and size_min <= prop["size"] <= size_max  # Match size range
+                       and ("Professionals" in prop["preferences"] or "No preference" in prop["preferences"])
+                    # Match preference
+                ]
+
+                # Display matches
+                if matching_properties:
+                    st.write(f"### Matching {choice.lower()} options:")
+                    for prop in matching_properties:
+                        st.markdown(
+                            f"""
+                                <div style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9;">
+                                    <strong>Type:</strong> {prop["type"]}<br>
+                                    <strong>Address:</strong> {prop["address"]}<br>
+                                    <strong>Size:</strong> {prop["size"]} sq. meters<br>
+                                    <strong>Price:</strong> €{prop["price"]}<br>
+                                    <strong>Preferences:</strong> {", ".join(prop["preferences"])}
+                                </div>
+                                """,
+                            unsafe_allow_html=True,
+                        )
+                else:
+                    st.warning(f"No {choice.lower()} options found matching your criteria.")
+            else:
+                st.error("No properties available in the database.")
 
 
 # Student Flow
 def student_flow():
     st.title("Guide for Students")
-    st.write("### Step 1: Choose Housing Type")
-    housing_type = st.radio("Select your housing preference:", ["Normal Housing", "Shared Housing"])
+    st.write("### Step 1: Are you looking for Rent or Shared Housing?")
+    choice = st.radio("Select your preference:", ["Rent", "Shared Housing"])
 
-    if housing_type == "Shared Housing":
-        st.write("### Step 2: Set Your Preferences")
-        max_people = st.slider("Maximum number of people:", 2, 6, 4)
-        same_sex = st.checkbox("Same-sex preference")
-        st.write(f"Preferences: Max {max_people} people, Same-sex: {same_sex}")
-        if st.button("Show Matches"):
-            st.write("### Mock Results")
-            st.markdown("- **Roommate 1:** John Doe, Age 25, Male")
-            st.markdown("- **Roommate 2:** Jane Smith, Age 22, Female")
+    if choice:
+        st.write(f"### Step 2: Filter {choice.lower()} options")
 
-    if st.button("Next"):
-        st.write("### Learn Tenant Rights")
-        st.markdown("Here’s a quick guide to your rights as a tenant...")
+        if choice == "Rent":
+            # Rent-specific filtering
+            price_min = st.number_input("Minimum Price (€)", min_value=0, value=0)
+            price_max = st.number_input("Maximum Price (€)", min_value=0, value=2000)
+            size_min = st.number_input("Minimum Size (sq. meters)", min_value=0, value=0)
+            size_max = st.number_input("Maximum Size (sq. meters)", min_value=0, value=100)
+
+        elif choice == "Shared Housing":
+            # Shared Housing-specific filtering
+            same_sex_pref = st.radio("Do you prefer same-sex housing?", ["Yes", "No"])
+            max_people = st.number_input("Maximum number of people allowed", min_value=1, value=3)
+            price_min = st.number_input("Minimum Price (€)", min_value=0, value=0)
+            price_max = st.number_input("Maximum Price (€)", min_value=0, value=1000)
+
+        # Find matches
+        if st.button("Find Matches"):
+            if "properties" in st.session_state:
+                # Filter logic
+                matching_properties = [
+                    prop for prop in st.session_state["properties"]
+                    if prop["type"].lower() == choice.lower()  # Match Rent/Shared Housing
+                       and price_min <= prop["price"] <= price_max  # Match price
+                       and (same_sex_pref == "No" or prop.get("same_sex_pref", "No") == same_sex_pref)  # Match same-sex
+                       and (choice != "Shared Housing" or prop.get("is_student", False))  # Ensure offerer is student
+                       and (choice != "Shared Housing" or prop.get("current_people", 0) < prop.get("max_people", 1))
+                    # Match people
+                ]
+
+                # Display matches
+                if matching_properties:
+                    st.write(f"### Matching {choice.lower()} options:")
+                    for prop in matching_properties:
+                        st.markdown(
+                            f"""
+                                <div style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9;">
+                                    <strong>Type:</strong> {prop["type"]}<br>
+                                    <strong>Address:</strong> {prop["address"]}<br>
+                                    <strong>Size:</strong> {prop["size"]} sq. meters<br>
+                                    <strong>Price:</strong> €{prop["price"]}<br>
+                                    <strong>Preferences:</strong> {", ".join(prop["preferences"])}
+                                </div>
+                                """,
+                            unsafe_allow_html=True,
+                        )
+                else:
+                    st.warning(f"No {choice.lower()} options found matching your criteria.")
+            else:
+                st.error("No properties available in the database.")
 
 
 # Family Flow
