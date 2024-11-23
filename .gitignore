@@ -6,6 +6,8 @@ __pycache__/
 # Virtual environment
 venv/
 .env/
+speedy/ 
+.speedy/
 
 # Streamlit cache
 .streamlit/
