@@ -15,6 +15,22 @@ st.title("Multilingual Housing Assistant")
 st.sidebar.title("Navigation")
 page = st.sidebar.selectbox("Select a page", ["Home", "Step-by-Step Guide", "Financial Tools", "Smart Recommendations", "Location Visualizer", "Quiz"])
 
+# Inject custom CSS for sidebar
+def set_sidebar_style():
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] {
+            background-color: #b7d7de;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+# Call the function to apply the style
+set_sidebar_style()
+
 # Multilingual Feature
 def translate_text():
     language = st.selectbox("Select Language", ["English", "German", "Spanish"])
