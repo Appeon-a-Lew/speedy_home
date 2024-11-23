@@ -52,11 +52,11 @@ deactivate
 
 ## Features 
 
--Multilingual Platform: Translate housing-related terms into different languages.
--Step-by-Step Guides: Tailored guides for different user profiles (e.g., professionals, students, families).
--Financial Tools: Mortgage calculator with visualization.
--Smart Recommendations: AI-based roommate or property matching.
--Interactive Location Visualizations: View properties and nearby amenities on a map.
--Gamified Education: Learn housing regulations with quizzes.
+- Multilingual Platform: Translate housing-related terms into different languages.
+- Step-by-Step Guides: Tailored guides for different user profiles (e.g., professionals, students, families).
+- Financial Tools: Mortgage calculator with visualization.
+- Smart Recommendations: AI-based roommate or property matching.
+- Interactive Location Visualizations: View properties and nearby amenities on a map.
+- Gamified Education: Learn housing regulations with quizzes.
 
 ## Development Notes
