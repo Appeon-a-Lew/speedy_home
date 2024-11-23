@@ -1,13 +1,14 @@
 import streamlit as st
-from googletrans import Translator
+#from googletrans import Translator
 import numpy as np
 import matplotlib.pyplot as plt
 import folium
 from streamlit_folium import st_folium
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
+import  bot
 # Initialize translator
-translator = Translator()
+#translator = Translator()
 
 # App Title
 st.title("Multilingual Housing Assistant")
@@ -65,6 +66,10 @@ if "chat_messages" not in st.session_state:
     st.session_state["chat_messages"] = []
 if "properties" not in st.session_state:
     st.session_state["properties"] = []
+if "chat_bot" not in st.session_state:
+    st.session_state["chat_bot"] = bot.Bot()
+if "ai_messages" not in st.session_state:
+    st.session_state["ai_messages"] = []
 if "user_profile" not in st.session_state:
     st.session_state["user_profile"] = {
         "email": "",
@@ -272,7 +277,25 @@ def ai_chat_assistant_page():
     st.title("AI Chat Assistant")
     st.session_state["step"] = 1
     st.session_state["user_type"] = None
-    st.markdown("This feature is coming soon! Stay tuned.")
+
+    for message in st.session_state["ai_messages"]:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    if prompt := st.chat_input("Servus!"):
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        st.session_state["ai_messages"].append({"role": "user", "content": prompt})
+
+        response =  st.session_state["chat_bot"].ask(prompt=prompt)
+        with st.chat_message("assistant"):
+            st.markdown(response)
+        st.session_state["ai_messages"].append({"role": "assistant", "content": response})
+
+    if st.button("Reset Chat"):
+        st.session_state["ai_messages"].clear()
+        set_page("AI Chat Assistant")
+
     if st.button("Back to Home"):
         set_page("Home")
 
