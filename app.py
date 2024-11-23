@@ -299,6 +299,7 @@ def ai_chat_assistant_page():
     if st.button("Back to Home"):
         set_page("Home")
 
+
 # Step-by-Step Guide
 def step_by_step_guide():
     st.title("Step-by-Step Guide")
