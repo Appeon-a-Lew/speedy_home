@@ -50,9 +50,9 @@ class Bot():
 
         return answer
 
-       
-chatbot = Bot()
-while True:
-    question = input("You: ")
-    print("AI: " + chatbot.ask(question))
-    
+if __name__ == "__main__":
+    chatbot = Bot()
+    while True:
+        question = input("You: ")
+        print("AI: " + chatbot.ask(question))
+        
