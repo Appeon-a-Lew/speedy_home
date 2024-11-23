@@ -29,11 +29,20 @@ def set_sidebar_style():
 # Call the function to apply the style
 set_sidebar_style()
 
+# Profile button at the top of the sidebar
+st.sidebar.markdown("### 👤 Profile")
+if st.sidebar.button("Go to Profile"):
+    st.session_state["current_page"] = "Profile"
+    st.experimental_rerun()
 
+# Add a divider for better organization
+st.sidebar.markdown("---")
 
 # Helper function for page navigation
 def set_page(page_name):
     st.session_state["current_page"] = page_name
+    st.experimental_rerun()
+
 
 # Helper function to update the current step
 def next_step(step):
@@ -52,7 +61,21 @@ if "current_page" not in st.session_state:
 if "step" not in st.session_state:
     st.session_state["step"] = 1
 if "user_type" not in st.session_state:
-    st.session_state["user_type"] = None # Start at step 1
+    st.session_state["user_type"] = None
+if "chat_messages" not in st.session_state:
+    st.session_state["chat_messages"] = []
+if "user_profile" not in st.session_state:
+    st.session_state["user_profile"] = {
+        "email": "",
+        "name": "",
+        "surname": "",
+        "phone": "",
+        "address": "",
+        "age": "",
+        "job": "",
+    }
+
+
 
 
 # Define pages
@@ -71,11 +94,120 @@ def home_page():
     # Buttons for navigation
     if st.button("Get Step-by-Step Guide"):
         set_page("Step-by-Step Guide")
-        st.experimental_rerun()
 
     if st.button("Ask AI Chat Assistant"):
         set_page("AI Chat Assistant")
+
+    if st.button("FAQ"):
+        set_page("FAQ")
+
+
+# Profile Page
+def profile_page():
+    st.title("Profile")
+    st.markdown(
+        f"""
+        <div style="background-color: #b7d7de; padding: 15px; border-radius: 5px;">
+            <h2 style="margin: 0;">Edit Your Profile</h2>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.session_state["step"] = 1
+    st.session_state["user_type"] = None
+
+    # User profile form
+    user_profile = st.session_state["user_profile"]
+    user_profile["email"] = st.text_input("Email", user_profile["email"])
+    user_profile["name"] = st.text_input("Name", user_profile["name"])
+    user_profile["surname"] = st.text_input("Surname", user_profile["surname"])
+    user_profile["phone"] = st.text_input("Phone Number", user_profile["phone"])
+    user_profile["address"] = st.text_input("Current Address", user_profile["address"])
+    user_profile["age"] = st.selectbox("Age", range(18, 101),
+        index=(user_profile["age"] - 18) if isinstance(user_profile["age"], int) else 0
+    )
+    user_profile["job"] = st.selectbox(
+        "Are you a student or a professional?",
+        ["", "Student", "Professional"],
+        index=["", "Student", "Professional"].index(user_profile["job"]),
+    )
+
+    # Save button
+    if st.button("Save Profile"):
+        st.success("Profile updated successfully!")
+        st.session_state["user_profile"] = user_profile
+
+    if st.button("Open Chat"):
+        set_page("Chat")
+
+    # Button for landlords to offer a house
+    if st.button("Offer a House"):
+        st.session_state["current_page"] = "Offer a House"
         st.experimental_rerun()
+
+    # Back button
+    if st.button("Back to Home"):
+        st.session_state["current_page"] = "Home"
+        st.experimental_rerun()
+
+# Placeholder for Offer a House Page
+def offer_a_house_page():
+    st.title("Offer a House")
+    st.markdown("This feature is coming soon!")
+    st.session_state["step"] = 1
+    st.session_state["user_type"] = None
+
+# Chat Page
+def chat_page():
+    st.title("Chat")
+    st.markdown("Send messages to other users.")
+
+    # Select recipient (hardcoded user list for demo purposes)
+    recipients = ["John Doe", "Jane Smith", "Alex Brown"]
+    recipient = st.selectbox("Select recipient", recipients)
+
+    # Message input
+    message = st.text_area("Type your message")
+
+    # Send button
+    if st.button("Send"):
+        if recipient and message:
+            # Save the message in session state
+            st.session_state["chat_messages"].append({
+                "recipient": recipient,
+                "message": message,
+                "timestamp": "Just now",  # Mock timestamp
+            })
+            st.success("Message sent!")
+        else:
+            st.error("Please select a recipient and type a message.")
+
+    # Display chat history for the selected recipient
+    st.markdown(f"### Chat History with {recipient}")
+    messages = [
+        msg for msg in st.session_state["chat_messages"]
+        if msg["recipient"] == recipient
+    ]
+
+    # Better UI for chat history
+    if messages:
+        for msg in messages:
+            st.markdown(
+                f"""
+                <div style="margin-bottom: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; background-color: #b7d7de;">
+                    <strong>{recipient}</strong> <span style="font-size: 0.8em; color: #555;">({msg['timestamp']})</span>
+                    <div style="margin-top: 5px;">{msg['message']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    else:
+        st.write("No messages with this recipient yet.")
+
+    # Back to Profile button
+    if st.button("Back to Profile"):
+        set_page("Profile")
+
 
 
 def ai_chat_assistant_page():
@@ -85,7 +217,6 @@ def ai_chat_assistant_page():
     st.markdown("This feature is coming soon! Stay tuned.")
     if st.button("Back to Home"):
         set_page("Home")
-        st.experimental_rerun()
 
 # Step-by-Step Guide
 def step_by_step_guide():
@@ -139,7 +270,6 @@ def professional_flow():
         st.markdown("Navigate to the Financial Tools page to explore mortgage calculators.")
         if st.button("Go to Financial Tools"):
             set_page("Financial Tools")
-            st.experimental_rerun()
 
 
 # Student Flow
@@ -254,6 +384,45 @@ def quiz():
         else:
             st.error("Wrong answer. The correct answer is '3 months.'")
 
+def faq_page():
+    st.title("Frequently Asked Questions (FAQ)")
+    st.markdown("Find answers to common questions below.")
+    st.session_state["step"] = 1
+    st.session_state["user_type"] = None
+
+    # Search box
+    query = st.text_input("Search FAQs", "").lower()
+
+    # FAQ data
+    faqs = {
+        "General": [
+            {"question": "What is this platform for?", "answer": "This platform helps you navigate the housing market in Germany with tools and guides tailored to your needs."},
+            {"question": "Who can use this platform?", "answer": "Anyone looking for housing in Germany, including professionals, students, and families."},
+        ],
+        "Housing Terms": [
+            {"question": "What is a mortgage?", "answer": "A mortgage is a loan used to purchase a property, secured against the property itself."},
+            {"question": "What is 'Vorfälligkeitsentschädigung'?", "answer": "It is a prepayment penalty charged by banks if you pay off your loan early."},
+        ],
+        "Platform Features": [
+            {"question": "How do I edit my profile?", "answer": "Go to the Profile page from the sidebar or click the Profile button at the top of the sidebar."},
+            {"question": "How do I use the Step-by-Step Guide?", "answer": "Navigate to the Step-by-Step Guide page and follow the prompts tailored to your profile."},
+        ],
+    }
+
+    # Display FAQs dynamically based on search query
+    for category, items in faqs.items():
+        filtered_items = [item for item in items if query in item["question"].lower()]
+        if filtered_items:
+            st.subheader(category)
+            for item in filtered_items:
+                with st.expander(item["question"]):
+                    st.write(item["answer"])
+
+    # If no results match the query
+    if query and all(not [item for item in items if query in item["question"].lower()] for items in faqs.values()):
+        st.warning("No FAQs found matching your search. Try a different query.")
+
+
 
 # Create a dictionary of pages for easy management
 pages = {
@@ -264,6 +433,10 @@ pages = {
     "Smart Recommendations": smart_recommendations,
     "Location Visualizer": location_visualizer,
     "Quiz": quiz,
+    "Profile": profile_page,
+    "Offer a House": offer_a_house_page,
+    "FAQ": faq_page,
+    "Chat": chat_page,
 
 }
 
@@ -273,90 +446,6 @@ page_selection = st.sidebar.selectbox("Select a page", options=list(pages.keys()
 # Update session state if the selectbox changes
 if page_selection != st.session_state["current_page"]:
     set_page(page_selection)
-    st.experimental_rerun()  # Force immediate page update
 
 # Render the current page
 pages[st.session_state["current_page"]]()
-
-# Render the current page
-## Define translations for simplicity
-
-
-# if st.session_state["current_page"] == "Home":
-#     home_page()translations = {
-#     "English": {
-#         "welcome": "Welcome to the Step-by-Step Guide!",
-#         "select_language": "Step 1: Select your language",
-#         "select_user_type": "Step 2: Who are you?",
-#         "professional": "Professional",
-#         "student": "Student",
-#         "family": "Family",
-#     },
-#     "German": {
-#         "welcome": "Willkommen zum Schritt-für-Schritt-Leitfaden!",
-#         "select_language": "Schritt 1: Wählen Sie Ihre Sprache",
-#         "select_user_type": "Schritt 2: Wer sind Sie?",
-#         "professional": "Berufstätiger",
-#         "student": "Student",
-#         "family": "Familie",
-#     },
-#     "Spanish": {
-#         "welcome": "¡Bienvenido a la Guía Paso a Paso!",
-#         "select_language": "Paso 1: Seleccione su idioma",
-#         "select_user_type": "Paso 2: ¿Quién eres tú?",
-#         "professional": "Profesional",
-#         "student": "Estudiante",
-#         "family": "Familia",
-#     },
-# }
-# elif st.session_state["current_page"] == "Step-by-Step Guide":
-#     step_by_step_guide()
-# elif st.session_state["current_page"] == "AI Chat Assistant":
-#     ai_chat_assistant_page()
-# elif st.session_state["current_page"] == "Financial Tools":
-#     financial_tools()
-# elif st.session_state["current_page"] == "Smart Recommendations":
-#     smart_recommendations()
-# elif st.session_state["current_page"] == "Location Visualizer":
-#     location_visualizer()
-# elif st.session_state["current_page"] == "Quiz":
-#     quiz()def step_by_step_guide():
-#     st.header("Step-by-Step Guide")
-#     tab1, tab2, tab3 = st.tabs(["Professional", "Student", "Family"])
-#
-#     with tab1:
-#         st.subheader("Guide for Professionals")
-#         st.write("1. Understand your budget")
-#         st.write("2. Learn about mortgages")
-#         st.write("3. Explore available properties")
-#
-#     with tab2:
-#         st.subheader("Guide for Students")
-#         st.write("1. Search for shared housing")
-#         st.write("2. Understand tenant rights")
-#         st.write("3. Apply for student council housing")
-#
-#     with tab3:
-#         st.subheader("Guide for Families")
-#         st.write("1. Plan for future needs (schools, childcare)")
-#         st.write("2. Explore family-friendly neighborhoods")
-#         st.write("3. Research mortgage options")
-
-
-# Page Routing
-# if page == "Home":
-#    st.subheader("Welcome to the Multilingual Housing Assistant!")
-#    translate_text()
-#elif page == "Step-by-Step Guide":
-#    step_by_step_guide()
-#elif page == "Financial Tools":
-#    financial_tools()
-#elif page == "Smart Recommendations":
-#    smart_recommendations()
-#elif page == "Location Visualizer":
-#    location_visualizer()
-#elif page == "Quiz":
-#    quiz()
-#elif page == "AI Chat Assistant":
-#    ai_chat_assistant_page()
-# """
