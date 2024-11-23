@@ -4,6 +4,10 @@
 __pycache__/
 
 # Virtual environment
+venv/
+.env/
+speedy/ 
+.speedy/
 stream/
 .env
 
