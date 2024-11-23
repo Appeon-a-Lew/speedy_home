@@ -109,6 +109,7 @@ def home_page():
 
 
 # Profile Page
+
 def profile_page():
     st.title("Profile")
     st.markdown(
@@ -140,7 +141,8 @@ def profile_page():
         "Are you a student or a professional?",
         ["", "Student", "Professional"],
         index=["", "Student", "Professional"].index(user_profile["job"]),
-    )
+    ) 
+    user_profile["monthly_income"] = st.number_input("Monthly Income (€)", min_value=0, value=int(user_profile.get("monthly_income", 0)))
 
     # Save button
     if st.button("Save Profile"):
@@ -415,12 +417,13 @@ def student_flow():
             price_max = st.number_input("Maximum Price (€)", min_value=0, value=2000)
             size_min = st.number_input("Minimum Size (sq. meters)", min_value=0, value=0)
             size_max = st.number_input("Maximum Size (sq. meters)", min_value=0, value=100)
+            my_same_gender_pref = False 
 
         elif choice == "Shared Housing":
             # Shared Housing-specific filtering
             # Gender and Same-Gender Preference
             gender = st.radio("Your Gender", ["Male", "Female"])
-            same_gender_pref = st.radio("Do you prefer same-gender housing?", ["Yes", "No"]) == "Yes"
+            my_same_gender_pref = st.radio("Do you prefer same-gender housing?", ["Yes", "No"]) == "Yes"
             max_people = st.number_input("Maximum number of people wished", min_value=1, value=3)
             price_max = st.number_input("Maximum Price (€)", min_value=0, value=1000)
 
@@ -432,10 +435,12 @@ def student_flow():
                     prop for prop in st.session_state["properties"]
                     if prop["type"].lower() == choice.lower()  # Match Rent/Shared Housing
                        and price_min <= prop["price"] <= price_max  # Match price
-                       and (not same_gender_pref or prop.get("gender") == gender)  # Match same gender if required
+                       and (not my_same_gender_pref or prop.get("gender") == gender)  # Match same gender if required
                        and (not prop.get("same_gender_pref") or prop.get("gender") == gender)  # Match owner preference
                        and (choice != "Shared Housing" or prop.get("is_student", False))  # Ensure offerer is student
-                       and (choice != "Shared Housing" or prop.get("current_people", 0) < prop.get("max_people", 1))
+                       and (choice != "Shared Housing" or prop.get("current_people", 0) < prop.get("max_people", 1))    
+                       and ("Students" in prop["preferences"] or "No preference" in prop["preferences"])
+
                     # Match people
                 ]
 
@@ -612,7 +617,8 @@ def generate_mock_data(houses_per_district=20):
         'shared_living': [],
         'lat': [],
         'lon': [],
-        'region': []
+        'region': [],
+        'address': []
     }
 
     for region, center in district_centers.items():
@@ -624,9 +630,9 @@ def generate_mock_data(houses_per_district=20):
         data['lat'].extend(lats)
         data['lon'].extend(lons)
         data['region'].extend([region] * houses_per_district)
+        data['address'].extend([f"{region} Street {i}" for i in range(houses_per_district)])
     
     return pd.DataFrame(data)
-
 # Count houses per district
 def count_houses_per_district(houses):
     district_counts = houses['region'].value_counts().reset_index()
@@ -657,10 +663,24 @@ def count_houses_per_district_with_filter(houses, preferences):
 
 # Main function for interactive visualization
 
+# Function to assess if the user can get the selected house
+def assess_user_for_house(user_profile, house):
+    # Simple assessment logic:
+    # User must have monthly income at least twice the rent price
+    # User must be above 18 years old
+    required_income = house['price'] * 2
+    user_income = user_profile.get('monthly_income', 0)
+    user_age = user_profile.get('age', 0)
+
+    if user_income >= required_income and user_age >= 18:
+        return True
+    else:
+        return False
+
+
 
 def location_visualizer():
     st.header("Interactive Location Visualizer")
-
 
     # Initialize session state for user preferences and housing data
     if 'user_preferences' not in st.session_state:
@@ -673,6 +693,8 @@ def location_visualizer():
         st.session_state['houses'] = generate_mock_data()
     if 'selected_district' not in st.session_state:
         st.session_state['selected_district'] = None
+    if 'selected_house' not in st.session_state:
+        st.session_state['selected_house'] = None
 
     # Sidebar: User Preferences
     st.sidebar.header("Set Your Preferences")
@@ -691,8 +713,9 @@ def location_visualizer():
             'transportation': transportation,
             'shared_living': shared_living
         }
-        # Reset selected district when preferences change
+        # Reset selected district and house when preferences change
         st.session_state['selected_district'] = None
+        st.session_state['selected_house'] = None
 
     # Load persistent housing data
     houses = st.session_state['houses']
@@ -730,12 +753,9 @@ def location_visualizer():
                 fill_opacity=0.6,
                 popup=f"{district}<br>Number of Houses: {count_text}",
                 tooltip=f"{district}: {count_text}",
-    # Assign district name for identification
-                **{'district_name': district}
             ).add_to(district_map)
 
-
-# Add the count as a larger, more readable text overlay
+            # Add the count as a larger, more readable text overlay
             folium.Marker(
                 location=center,
                 icon=folium.DivIcon(
@@ -783,20 +803,71 @@ def location_visualizer():
         # Filter houses in the selected district
         district_houses = filtered_houses[filtered_houses['region'] == selected_district]
 
-        # Add house markers
+        # Add house markers with popup including details
         for _, house in district_houses.iterrows():
+            # Prepare the HTML content for the popup
+            popup_html = f"""
+                <b>House ID:</b> {house['id']}<br>
+                <b>Price:</b> €{house['price']}<br>
+                <b>Transport Score:</b> {house['transportation']}<br>
+                <b>Shared Living:</b> {'Yes' if house['shared_living'] else 'No'}<br>
+                <b>Address:</b> {house['address'] if 'address' in house else 'N/A'}<br>
+            """
+
+            popup = folium.Popup(popup_html, max_width=300)
+
             folium.Marker(
                 location=[house['lat'], house['lon']],
-                popup=f"Price: €{house['price']}<br>Transport: {house['transportation']}<br>Shared: {house['shared_living']}",
+                popup=popup,
                 tooltip=f"House ID: {house['id']}"
             ).add_to(district_map)
 
         # Display map
-        st_folium(district_map, width=800, height=600)
+        map_output = st_folium(district_map, width=800, height=600)
+
+        # Handle house marker clicks
+        if map_output and map_output['last_object_clicked']:
+            # Get the location of the click
+            clicked_lat = map_output['last_object_clicked']['lat']
+            clicked_lng = map_output['last_object_clicked']['lng']
+
+            # Find the house that was clicked
+            for _, house in district_houses.iterrows():
+                dist = np.linalg.norm(np.array([clicked_lat, clicked_lng]) - np.array([house['lat'], house['lon']]))
+                if dist < 0.0001:  # Adjust threshold as needed
+                    st.session_state['selected_house'] = house['id']
+                    break
+
+        # Display house details and assessment if a house is selected
+        if st.session_state['selected_house']:
+            selected_house = houses[houses['id'] == st.session_state['selected_house']].iloc[0]
+            st.subheader("House Details")
+            st.write(f"**House ID:** {selected_house['id']}")
+            st.write(f"**Price:** €{selected_house['price']}")
+            st.write(f"**Transport Score:** {selected_house['transportation']}")
+            st.write(f"**Shared Living:** {'Yes' if selected_house['shared_living'] else 'No'}")
+            st.write(f"**Address:** {selected_house['address'] if 'address' in selected_house else 'N/A'}")
+            st.write("**Picture:**")
+            st.image("https://img.freepik.com/free-photo/modern-residential-district-with-green-roof-balcony-generated-by-ai_188544-10276.jpg", caption="House Image")  # Replace with actual image URL
+
+            # Assess button
+            if st.button("Assess"):
+                assessment = assess_user_for_house(st.session_state['user_profile'], selected_house)
+                if assessment:
+                    st.success('Congratulations! You meet the requirements for this house.', icon="✅")  
+                else:
+                    st.error("We're sorry, but you do not meet the requirements for this house.")
+
+            # Option to go back to the map view
+            if st.button("Back to Map"):
+                st.session_state['selected_house'] = None
+                st.experimental_rerun()
 
         # Option to go back to district view
         if st.button("Back to Districts"):
             st.session_state['selected_district'] = None
+            st.session_state['selected_house'] = None
+            st.experimental_rerun()
 
 
 # Quiz
