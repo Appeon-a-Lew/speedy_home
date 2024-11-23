@@ -125,6 +125,10 @@ def profile_page():
     user_profile["surname"] = st.text_input("Surname", user_profile["surname"])
     user_profile["phone"] = st.text_input("Phone Number", user_profile["phone"])
     user_profile["address"] = st.text_input("Current Address", user_profile["address"])
+    user_profile["gender"] = st.multiselect(
+            "Gender",
+            ["Male", "Female", "Divers"]
+        )
     user_profile["age"] = st.selectbox("Age", range(18, 101),
         index=(user_profile["age"] - 18) if isinstance(user_profile["age"], int) else 0
     )
@@ -165,24 +169,32 @@ def offer_a_house_page():
     size = st.number_input("Size (in sq. meters)", min_value=0)
     price = st.number_input("Price (€)", min_value=0)
 
+    # Proximity details for family-friendly properties
+    proximity_schools = st.radio("Is the property close to schools?", ["Yes", "No"]) == "Yes"
+    proximity_parks = st.radio("Is the property close to parks?", ["Yes", "No"]) == "Yes"
+
     # Shared housing specific details
     shared_housing_details = {}
     if property_type == "Shared Housing":
+        gender = st.radio("Your Gender", ["Male", "Female"])
         is_student = st.radio("Are you a student?", ["Yes", "No"]) == "Yes"
         current_people = st.number_input("Number of people currently living in the house", min_value=0, value=0)
         max_people = st.number_input("Maximum number of people allowed", min_value=current_people + 1)
         same_sex_pref = st.radio("Same-sex preference?", ["Yes", "No"])
         shared_housing_details = {
+            "gender": gender,
             "is_student": is_student,
             "current_people": current_people,
             "max_people": max_people,
             "same_sex_pref": same_sex_pref,
         }
+        preferences = "Students"
+    else:
+        preferences = st.multiselect(
+            "Preferences",
+            ["Students", "Professionals", "Families", "No preference"]
+        )
 
-    preferences = st.multiselect(
-        "Preferences",
-        ["Students", "Professionals", "Families", "No preference"]
-    )
 
     # Save to database button
     if st.button("Submit"):
@@ -194,6 +206,8 @@ def offer_a_house_page():
                 "size": size,
                 "price": price,
                 "preferences": preferences,
+                "proximity_schools": proximity_schools,
+                "proximity_parks": proximity_parks,
                 **shared_housing_details,
             }
 
@@ -381,9 +395,10 @@ def student_flow():
 
         elif choice == "Shared Housing":
             # Shared Housing-specific filtering
-            same_sex_pref = st.radio("Do you prefer same-sex housing?", ["Yes", "No"])
-            max_people = st.number_input("Maximum number of people allowed", min_value=1, value=3)
-            price_min = st.number_input("Minimum Price (€)", min_value=0, value=0)
+            # Gender and Same-Gender Preference
+            gender = st.radio("Your Gender", ["Male", "Female"])
+            same_gender_pref = st.radio("Do you prefer same-gender housing?", ["Yes", "No"]) == "Yes"
+            max_people = st.number_input("Maximum number of people wished", min_value=1, value=3)
             price_max = st.number_input("Maximum Price (€)", min_value=0, value=1000)
 
         # Find matches
@@ -394,7 +409,8 @@ def student_flow():
                     prop for prop in st.session_state["properties"]
                     if prop["type"].lower() == choice.lower()  # Match Rent/Shared Housing
                        and price_min <= prop["price"] <= price_max  # Match price
-                       and (same_sex_pref == "No" or prop.get("same_sex_pref", "No") == same_sex_pref)  # Match same-sex
+                       and (not same_gender_pref or prop.get("gender") == gender)  # Match same gender if required
+                       and (not prop.get("same_gender_pref") or prop.get("gender") == gender)  # Match owner preference
                        and (choice != "Shared Housing" or prop.get("is_student", False))  # Ensure offerer is student
                        and (choice != "Shared Housing" or prop.get("current_people", 0) < prop.get("max_people", 1))
                     # Match people
@@ -425,18 +441,58 @@ def student_flow():
 # Family Flow
 def family_flow():
     st.title("Guide for Families")
-    st.write("### Step 1: Plan Around Family Needs")
-    st.write("Select features important to your family:")
-    schools = st.checkbox("Proximity to schools")
-    childcare = st.checkbox("Proximity to childcare")
-    parks = st.checkbox("Proximity to parks")
-    st.write("Selected preferences:", "Schools" if schools else "", "Childcare" if childcare else "",
-             "Parks" if parks else "")
+    st.write("### Step 1: Are you looking for Rent or Buy?")
+    choice = st.radio("Select your preference:", ["Rent", "Buy"])
 
-    if st.button("Explore Properties"):
-        st.write("### Explore Family-Friendly Properties")
-        st.markdown("- **Property 1:** 3-bedroom, near school and park")
-        st.markdown("- **Property 2:** 2-bedroom, close to childcare and shopping")
+    if choice:
+        st.write(f"### Step 2: Filter {choice.lower()} options")
+
+        # Collect family-specific preferences
+        bedrooms = st.number_input("Minimum Number of Bedrooms", min_value=1, value=2)
+        proximity_schools = st.radio("Do you need proximity to schools?", ["Yes", "No"]) == "Yes"
+        proximity_parks = st.radio("Do you need proximity to parks?", ["Yes", "No"]) == "Yes"
+        price_min = st.number_input("Minimum Price (€)", min_value=0, value=0)
+        price_max = st.number_input("Maximum Price (€)", min_value=0, value=5000)
+        size_min = st.number_input("Minimum Size (sq. meters)", min_value=0, value=50)
+        size_max = st.number_input("Maximum Size (sq. meters)", min_value=0, value=300)
+
+        # Find matches
+        if st.button("Find Matches"):
+            if "properties" in st.session_state:
+                # Filter properties
+                matching_properties = [
+                    prop for prop in st.session_state["properties"]
+                    if prop["type"].lower() == choice.lower()  # Match Rent/Buy
+                    and price_min <= prop["price"] <= price_max  # Match price range
+                    and size_min <= prop["size"] <= size_max  # Match size range
+                    and ("Families" in prop["preferences"] or "No preference" in prop["preferences"])  # Match preference
+                    and (not proximity_schools or prop["proximity_schools"])  # Match school proximity
+                    and (not proximity_parks or prop["proximity_parks"])  # Match park proximity
+                ]
+
+                # Display matches
+                if matching_properties:
+                    st.write(f"### Matching {choice.lower()} options:")
+                    for prop in matching_properties:
+                        st.markdown(
+                            f"""
+                            <div style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9;">
+                                <strong>Type:</strong> {prop["type"]}<br>
+                                <strong>Address:</strong> {prop["address"]}<br>
+                                <strong>Size:</strong> {prop["size"]} sq. meters<br>
+                                <strong>Price:</strong> €{prop["price"]}<br>
+                                <strong>Preferences:</strong> {", ".join(prop["preferences"])}<br>
+                                <strong>Proximity to Schools:</strong> {"Yes" if prop["proximity_schools"] else "No"}<br>
+                                <strong>Proximity to Parks:</strong> {"Yes" if prop["proximity_parks"] else "No"}
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                else:
+                    st.warning(f"No {choice.lower()} options found matching your criteria.")
+            else:
+                st.error("No properties available in the database.")
+
 
 
 # Financial Tools
