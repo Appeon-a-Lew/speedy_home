@@ -195,6 +195,8 @@ def count_houses_per_district_with_filter(houses, preferences):
 
 
 # Main function for interactive visualization
+
+
 def location_visualizer():
     st.header("Interactive Location Visualizer")
 
@@ -207,6 +209,8 @@ def location_visualizer():
         }
     if 'houses' not in st.session_state:
         st.session_state['houses'] = generate_mock_data()
+    if 'selected_district' not in st.session_state:
+        st.session_state['selected_district'] = None
 
     # Sidebar: User Preferences
     st.sidebar.header("Set Your Preferences")
@@ -225,58 +229,113 @@ def location_visualizer():
             'transportation': transportation,
             'shared_living': shared_living
         }
+        # Reset selected district when preferences change
+        st.session_state['selected_district'] = None
 
     # Load persistent housing data
     houses = st.session_state['houses']
 
+    # Filter houses based on user preferences
+    filtered_houses = houses[
+        (houses['price'] <= st.session_state['user_preferences']['price']) &
+        (houses['transportation'] >= st.session_state['user_preferences']['transportation']) &
+        (houses['shared_living'] == st.session_state['user_preferences']['shared_living'])
+    ]
+
     # Count houses per district after filtering
-    district_counts = count_houses_per_district_with_filter(houses, st.session_state['user_preferences'])
+    district_counts = filtered_houses['region'].value_counts().reset_index()
+    district_counts.columns = ['District', 'Number of Houses']
 
     # Map Visualization
     st.header("Explore the Number of Houses Per District")
-    district_map = folium.Map(location=[48.1374, 11.5755], zoom_start=12)
 
-    # Add district counts directly as numbers on the markers
-    for district, center in district_centers.items():
-        count = district_counts.loc[district_counts['District'] == district, 'Number of Houses']
-        count_text = count.values[0] if not count.empty else 0  # Show 0 if no houses match
+    if st.session_state['selected_district'] is None:
+        # Show the districts with counts
+        district_map = folium.Map(location=[48.1374, 11.5755], zoom_start=12)
 
-        # Add CircleMarker with count as its text
-        folium.CircleMarker(
-            location=center,
-            radius=15,  # Adjust size for the marker
-            color='blue',
-            fill=True,
-            fill_color='blue',
-            fill_opacity=0.6,
-            popup=f"{district}<br>Number of Houses: {count_text}",
-            tooltip=f"{district}: {count_text}",
-        ).add_to(district_map)
+        # Add district counts directly as numbers on the markers
+        for district, center in district_centers.items():
+            count = district_counts.loc[district_counts['District'] == district, 'Number of Houses']
+            count_text = count.values[0] if not count.empty else 0  # Show 0 if no houses match
 
-        # Add the count as a larger, more readable text overlay
-        folium.Marker(
-            location=center,
-            icon=folium.DivIcon(html=f"""
-                <div style="
-                    font-size: 16px; 
-                    font-weight: bold; 
-                    color: black; 
-                    text-align: center; 
-                    background: white; 
-                    border-radius: 50%; 
-                    border: 2px solid blue; 
-                    width: 30px; 
-                    height: 30px; 
-                    line-height: 30px;
-                    ">
-                    {count_text}
-                </div>
-            """)
-        ).add_to(district_map)
+            # Add CircleMarker with count as its text
+            folium.CircleMarker(
+                location=center,
+                radius=15,  # Adjust size for the marker
+                color='blue',
+                fill=True,
+                fill_color='blue',
+                fill_opacity=0.6,
+                popup=f"{district}<br>Number of Houses: {count_text}",
+                tooltip=f"{district}: {count_text}",
+    # Assign district name for identification
+                **{'district_name': district}
+            ).add_to(district_map)
 
 
-    # Display map
-    st_folium(district_map, width=800, height=600)
+# Add the count as a larger, more readable text overlay
+            folium.Marker(
+                location=center,
+                icon=folium.DivIcon(
+                    icon_size=(35, 35),  # Set the size of the icon
+                    icon_anchor=(17.5, 17.5),  # Center the icon
+                    html=f"""
+                        <div style="
+                            font-size: 18px; 
+                            font-weight: bold; 
+                            color: black; 
+                            text-align: center; 
+                            background: white; 
+                            border-radius: 50%; 
+                            border: 2px solid blue; 
+                            width: 35px; 
+                            height: 35px; 
+                            line-height: 35px;
+                        ">
+                            {count_text}
+                        </div>
+                        """
+                )
+            ).add_to(district_map)
+        # Display map and capture interaction
+        map_output = st_folium(district_map, width=800, height=600)
+
+        # Handle district marker clicks
+        if map_output and map_output['last_object_clicked']:
+            # Get the location of the click
+            clicked_lat = map_output['last_object_clicked']['lat']
+            clicked_lng = map_output['last_object_clicked']['lng']
+
+            # Identify which district was clicked
+            for district, center in district_centers.items():
+                dist = np.linalg.norm(np.array([clicked_lat, clicked_lng]) - np.array(center))
+                if dist < 0.01:  # Adjust threshold as needed
+                    st.session_state['selected_district'] = district
+                    break
+    else:
+        # Show the houses in the selected district
+        selected_district = st.session_state['selected_district']
+        district_center = district_centers[selected_district]
+        district_map = folium.Map(location=district_center, zoom_start=14)
+
+        # Filter houses in the selected district
+        district_houses = filtered_houses[filtered_houses['region'] == selected_district]
+
+        # Add house markers
+        for _, house in district_houses.iterrows():
+            folium.Marker(
+                location=[house['lat'], house['lon']],
+                popup=f"Price: €{house['price']}<br>Transport: {house['transportation']}<br>Shared: {house['shared_living']}",
+                tooltip=f"House ID: {house['id']}"
+            ).add_to(district_map)
+
+        # Display map
+        st_folium(district_map, width=800, height=600)
+
+        # Option to go back to district view
+        if st.button("Back to Districts"):
+            st.session_state['selected_district'] = None
+
 
 # Quiz
 def quiz():
