@@ -33,7 +33,7 @@ set_sidebar_style()
 st.sidebar.markdown("### 👤 Profile")
 if st.sidebar.button("Go to Profile"):
     st.session_state["current_page"] = "Profile"
-    st.experimental_rerun()
+    st.rerun()
 
 # Add a divider for better organization
 st.sidebar.markdown("---")
@@ -41,7 +41,7 @@ st.sidebar.markdown("---")
 # Helper function for page navigation
 def set_page(page_name):
     st.session_state["current_page"] = page_name
-    st.experimental_rerun()
+    st.rerun()
 
 
 # Helper function to update the current step
@@ -81,6 +81,8 @@ if "user_profile" not in st.session_state:
         "job": "",
     }
 
+if "homes" not in st.session_state:
+    st.session_state["homes"] = []
 
 
 
@@ -155,12 +157,12 @@ def profile_page():
     # Button for landlords to offer a house
     if st.button("Offer a House"):
         st.session_state["current_page"] = "Offer a House"
-        st.experimental_rerun()
+        st.rerun()
 
     # Back button
     if st.button("Back to Home"):
         st.session_state["current_page"] = "Home"
-        st.experimental_rerun()
+        st.rerun()
 
 # Placeholder for Offer a House Page
 def offer_a_house_page():
@@ -228,7 +230,7 @@ def chat_page():
     st.markdown("Send messages to other users.")
 
     # Select recipient (hardcoded user list for demo purposes)
-    recipients = ["John Doe", "Jane Smith", "Alex Brown"]
+    recipients = ["John Doe", "Jane Smith", "Alex Brown", "T. Hofmann"]
     recipient = st.selectbox("Select recipient", recipients)
 
     # Message input
@@ -289,7 +291,9 @@ def ai_chat_assistant_page():
             st.markdown(prompt)
         st.session_state["ai_messages"].append({"role": "user", "content": prompt})
 
-        response =  st.session_state["chat_bot"].ask(prompt=prompt)
+        homess = st.session_state["homes"]
+
+        response =  st.session_state["chat_bot"].ask(prompt=prompt,language = "English", context = homess, user = st.session_state["user_profile"])
         with st.chat_message("assistant"):
             st.markdown(response)
         st.session_state["ai_messages"].append({"role": "assistant", "content": response})
@@ -313,15 +317,15 @@ def step_by_step_guide():
         with col1:
             if st.button("Professional"):
                 set_user_type("Professional")
-                st.experimental_rerun()
+                st.rerun()
         with col2:
             if st.button("Student"):
                 set_user_type("Student")
-                st.experimental_rerun()
+                st.rerun()
         with col3:
             if st.button("Family"):
                 set_user_type("Family")
-                st.experimental_rerun()
+                st.rerun()
 
     # Step 2: Tailored flow based on user type
     elif st.session_state["step"] == 2:
@@ -339,7 +343,7 @@ def step_by_step_guide():
         if st.button("Back"):
             st.session_state["step"] = 1
             st.session_state["user_type"] = None
-            st.experimental_rerun()
+            st.rerun()
 
 
 # Professional Flow
@@ -382,6 +386,7 @@ def professional_flow():
 
                 # Display matches
                 if matching_properties:
+                    cnt = 0
                     st.write(f"### Matching {choice.lower()} options:")
                     for prop in matching_properties:
                         st.markdown(
@@ -396,6 +401,10 @@ def professional_flow():
                                 """,
                             unsafe_allow_html=True,
                         )
+                        if st.button(f"MJ {cnt}"):
+                            st.session_state["chat_messages"].append({"recipient" : "John Doe", "message" : "Niggalodeaon", "timestamp" : "Just Now"})
+                        cnt+=1
+                            
                 else:
                     st.warning(f"No {choice.lower()} options found matching your criteria.")
             else:
@@ -673,6 +682,8 @@ def assess_user_for_house(user_profile, house):
     user_age = user_profile.get('age', 0)
 
     if user_income >= required_income and user_age >= 18:
+        st.session_state["homes"].append(str(house))
+        print(st.session_state["homes"])
         return True
     else:
         return False
@@ -861,13 +872,13 @@ def location_visualizer():
             # Option to go back to the map view
             if st.button("Back to Map"):
                 st.session_state['selected_house'] = None
-                st.experimental_rerun()
+                st.rerun()
 
         # Option to go back to district view
         if st.button("Back to Districts"):
             st.session_state['selected_district'] = None
             st.session_state['selected_house'] = None
-            st.experimental_rerun()
+            st.rerun()
 
 
 # Quiz

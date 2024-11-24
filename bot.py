@@ -14,7 +14,7 @@ key = os.environ["OPEN_AI_KEY"]
 class Bot():
     def __init__(self, model = "gpt-4o", key = key):
         self.contextualize_q_system_prompt = (
-        "You are a helpful AI assistant that consults user on housing {housing_context}."
+        "You are a helpful AI assistant that consults user on housing options: {housing_context} depending on the user profile {user}."
         "Given a chat history {history} and the latest user question "
         "which might reference context in the chat history, "
         "answer the user in the language {output_language}, in the most decisive way "
@@ -32,13 +32,14 @@ class Bot():
         self.chain = self.instruct_prompt | self.llm
         
         
-    def ask(self, prompt, language = "English", context = ""):
+    def ask(self, prompt, language = "English", context = "", user = "average person"):
         self.history = self.history[-18:]
         
         answer = self.chain.invoke(
             {   
                 "history" : self.history,
                 "housing_context" : context,
+                "user" : str(user),
                 "output_language": language,
                 "input": prompt,
 
