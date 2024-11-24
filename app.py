@@ -173,6 +173,7 @@ def offer_a_house_page():
 
     # Property details form
     property_type = st.selectbox("Is this property for Rent, Sale, or Shared Housing?", ["Rent", "Sale", "Shared Housing"])
+    owner_name = st.text_input("owner_name")
     address = st.text_input("Address")
     size = st.number_input("Size (in sq. meters)", min_value=0)
     price = st.number_input("Price (€)", min_value=0)
@@ -216,6 +217,7 @@ def offer_a_house_page():
                 "preferences": preferences,
                 "proximity_schools": proximity_schools,
                 "proximity_parks": proximity_parks,
+                "owner_name" : owner_name,
                 **shared_housing_details,
             }
 
@@ -388,6 +390,7 @@ def professional_flow():
                 if matching_properties:
                     cnt = 0
                     st.write(f"### Matching {choice.lower()} options:")
+                    cnt = 0
                     for prop in matching_properties:
                         st.markdown(
                             f"""
@@ -400,6 +403,7 @@ def professional_flow():
                                 </div>
                                 """,
                             unsafe_allow_html=True,
+                            
                         )
                         if st.button(f"MJ {cnt}"):
                             st.session_state["chat_messages"].append({"recipient" : "John Doe", "message" : "Niggalodeaon", "timestamp" : "Just Now"})
@@ -618,7 +622,7 @@ def generate_coordinates(center, num_points, radius=0.01):
     return latitudes, longitudes
 
 # Generate mock housing data
-def generate_mock_data(houses_per_district=20):
+def generate_mock_data(houses_per_district=40):
     data = {
         'id': [],
         'price': [],
@@ -806,6 +810,44 @@ def location_visualizer():
                     st.session_state['selected_district'] = district
                     break
     else:
+        house_images = [
+            "https://pictures.immobilienscout24.de/dims3/S3/legacy_thumbnail/800x600/format/webp/quality/73/http://s3-eu-west-1.amazonaws.com/pda-pro-pictures-projectpictures-8hecgpgpb9fo/59977873/b3e639e2-8b5d-419b-b3f4-a13ef1b06b44.jpg",
+            "https://pictures.immobilienscout24.de/listings/b1b0fe30-24fa-45eb-b339-6cc380bc12a4-1862446778.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/31470eae-6ddc-4c30-a35a-128c2799c3a9-1862590404.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/a7eafd80-0384-4b80-99b0-805efd4f19e7-1790699901.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/7f3366f9-e056-44c6-9a9a-16ea57045902-1409219300.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/5cbbb3b2-5b7b-4a79-84ad-4113467fe69f-1859079993.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/cd5b168f-d60a-4e26-9bfa-a61910b223fe-1861893232.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/a75f94ae-e032-48db-a1f6-65b16178c51b-1859861946.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/662e6141-31f9-4d61-8f21-66cdd8b0dacd-1845492399.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/772d8c24-910a-4ca2-99ab-98b49d990862-1838047478.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/b924fca7-1d32-4035-aea5-8752ab50eead-1810315289.jpg/ORIG/legacy_thumbnail/420x315/format/webp/quality/73",
+            "https://pictures.immobilienscout24.de/listings/f8fa991e-1f0b-4d9b-ab1c-26f4462fafec-1860463939.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/851fb9e7-da7a-4001-93d9-f1c4d3edede9-1857806205.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/9fcc1164-fa48-4b85-accc-6452a3ab5b54-1858257537.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/b99693e0-e70b-48f5-824a-122935e66ba8-1854421902.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/9f8a3908-823d-4ceb-9c52-63ee816652c1-1860936626.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/441c2204-0ead-40c9-9f6f-18bf296881b1-1491910987.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/336f39ea-5064-4b2f-8e56-f78375561445-1851651912.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/42d03a56-1bb0-4ecb-8f6e-b8a5d60ab03d-1846082319.jpeg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/3072b6f1-fe9e-40af-be27-8f5c49b708e1-1859322008.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/32ef8af0-4602-46fe-b800-8c244ef1fd44-1858950053.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/5ddbaf57-0077-42d9-95c5-d269d9eb1f24-1857854473.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/b554d22f-a028-42fd-965e-e876f3e41ad4-1856810703.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/413b43ba-c4bb-4c56-80f5-17364fbd719f-1853173455.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/e995aa19-8bc2-4221-8ca0-e355575d6065-1856184726.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/bd627363-aaa8-42ea-9717-f9264dbf58e9-1861202025.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/8840f5c5-acca-4fec-9703-7674dcd4a040-1860846507.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/99e2cae4-a748-4384-9940-e9e51ec30a2a-1860344126.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/5a97271b-6055-40cd-aa0f-997280a7b71f-1860203449.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/98b1e9d1-4d70-4d2c-aaf7-69628f22839a-1859327566.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/0a21fe69-72c6-4fec-aac6-a8bc4a59c6e8-1854786018.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/4f071de9-dfd1-4239-ac45-afaf39fb7811-1851392403.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/3e105cc3-c939-4477-8c13-f1b82a73d992-1848432677.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/3e105cc3-c939-4477-8c13-f1b82a73d992-1848432677.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/df620cd6-dab3-47e7-9e68-d0fa806db4b1-1853516841.png/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            "https://pictures.immobilienscout24.de/listings/a27cff34-0e19-48cc-b24a-9ee7db8974bf-1829425500.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
+            ]
         # Show the houses in the selected district
         selected_district = st.session_state['selected_district']
         district_center = district_centers[selected_district]
@@ -859,7 +901,8 @@ def location_visualizer():
             st.write(f"**Shared Living:** {'Yes' if selected_house['shared_living'] else 'No'}")
             st.write(f"**Address:** {selected_house['address'] if 'address' in selected_house else 'N/A'}")
             st.write("**Picture:**")
-            st.image("https://img.freepik.com/free-photo/modern-residential-district-with-green-roof-balcony-generated-by-ai_188544-10276.jpg", caption="House Image")  # Replace with actual image URL
+            image_index = selected_house['id'] % len(house_images)  # Cycle through images
+            st.image(house_images[image_index], caption="House Image") # Replace with actual image URL
 
             # Assess button
             if st.button("Assess"):
