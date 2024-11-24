@@ -10,7 +10,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import bot
 
 # App Title
-st.title("Multilingual Housing Assistant")
+st.title("Speedy Home")
 st.sidebar.title("Navigation")
 
 # Inject custom CSS for sidebar
@@ -52,6 +52,8 @@ def set_user_type(user_type):
     st.session_state["step"] = 2
 
 # Initialize session state for navigation
+if "chat_language"  not in st.session_state:
+    st.session_state["chat_language"] = "English"
 if "current_page" not in st.session_state:
     st.session_state["current_page"] = "Home"
 if "step" not in st.session_state:
@@ -175,7 +177,7 @@ def count_houses_per_district(houses):
 
 # Home Page
 def home_page():
-    st.title("Welcome to the Multilingual Housing Assistant")
+    st.title("Welcome")
     st.markdown(
         """
         **Our Mission**: Helping you navigate the German housing market with ease.  
@@ -392,7 +394,7 @@ def ai_chat_assistant_page():
 
         homess = st.session_state["homes"]
 
-        response =  st.session_state["chat_bot"].ask(prompt=prompt,language = "English", context = homess, user = st.session_state["user_profile"])
+        response =  st.session_state["chat_bot"].ask(prompt=prompt,language = st.session_state["chat_language"], context = homess, user = st.session_state["user_profile"])
         with st.chat_message("assistant"):
             st.markdown(response)
         st.session_state["ai_messages"].append({"role": "assistant", "content": response})
@@ -400,6 +402,8 @@ def ai_chat_assistant_page():
     if st.button("Reset Chat"):
         st.session_state["ai_messages"].clear()
         set_page("AI Chat Assistant")
+    
+    st.session_state["chat_language"] = st.selectbox("Language", ["English", "German", "Spanish", "Chinese (mandarin)"])
 
     if st.button("Back to Home"):
         set_page("Home")
