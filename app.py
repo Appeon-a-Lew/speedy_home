@@ -1,14 +1,13 @@
+
 import streamlit as st
-#from googletrans import Translator
+#import googletrans
 import numpy as np
 import matplotlib.pyplot as plt
 import folium
 from streamlit_folium import st_folium
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
-import  bot
-# Initialize translator
-#translator = Translator()
+import bot
 
 # App Title
 st.title("Multilingual Housing Assistant")
@@ -43,7 +42,6 @@ def set_page(page_name):
     st.session_state["current_page"] = page_name
     st.experimental_rerun()
 
-
 # Helper function to update the current step
 def next_step(step):
     st.session_state["current_step"] = step
@@ -52,8 +50,6 @@ def next_step(step):
 def set_user_type(user_type):
     st.session_state["user_type"] = user_type
     st.session_state["step"] = 2
-
-
 
 # Initialize session state for navigation
 if "current_page" not in st.session_state:
@@ -64,8 +60,6 @@ if "user_type" not in st.session_state:
     st.session_state["user_type"] = None
 if "chat_messages" not in st.session_state:
     st.session_state["chat_messages"] = []
-if "properties" not in st.session_state:
-    st.session_state["properties"] = []
 if "chat_bot" not in st.session_state:
     st.session_state["chat_bot"] = bot.Bot()
 if "ai_messages" not in st.session_state:
@@ -79,12 +73,105 @@ if "user_profile" not in st.session_state:
         "address": "",
         "age": "",
         "job": "",
+        "monthly_income": 0,
+        "gender": ""
     }
 
+# Define district coordinates
+district_centers = {
+    'Altstadt-Lehel': [48.1371, 11.5753],
+    'Ludwigsvorstadt-Isarvorstadt': [48.1299, 11.5657],
+    'Maxvorstadt': [48.1517, 11.5675],
+    'Schwabing-West': [48.1597, 11.5542],
+    'Au-Haidhausen': [48.1288, 11.5934],
+    'Sendling': [48.1115, 11.5465],
+    'Sendling-Westpark': [48.1202, 11.5191],
+    'Schwanthalerhöhe': [48.1364, 11.5395],
+    'Neuhausen-Nymphenburg': [48.1540, 11.5216],
+    'Moosach': [48.1742, 11.4985],
+    'Milbertshofen-Am Hart': [48.1925, 11.5692],
+    'Schwabing-Freimann': [48.1723, 11.5887],
+    'Bogenhausen': [48.1530, 11.6097],
+    'Berg am Laim': [48.1266, 11.6351],
+    'Trudering-Riem': [48.1210, 11.6574],
+    'Ramersdorf-Perlach': [48.0988, 11.6229],
+    'Obergiesing-Fasangarten': [48.1002, 11.6015],
+    'Untergiesing-Harlaching': [48.0986, 11.5799],
+    'Thalkirchen-Obersendling-Forstenried-Fürstenried-Solln': [48.0965, 11.5232],
+    'Hadern': [48.1148, 11.4837],
+    'Pasing-Obermenzing': [48.1446, 11.4623],
+    'Aubing-Lochhausen-Langwied': [48.1661, 11.4022],
+    'Allach-Untermenzing': [48.1795, 11.4715],
+    'Feldmoching-Hasenbergl': [48.1942, 11.5420],
+    'Laim': [48.1338, 11.5103],
+}
 
+# Function to generate random coordinates near a district's center
+def generate_coordinates(center, num_points, radius=0.01):
+    latitudes = np.random.uniform(center[0] - radius, center[0] + radius, num_points)
+    longitudes = np.random.uniform(center[1] - radius, center[1] + radius, num_points)
+    return latitudes, longitudes
 
+# Generate mock housing data
+def generate_mock_data(houses_per_district=40):
+    data = {
+        'id': [],
+        'price': [],
+        'transportation': [],
+        'shared_living': [],
+        'lat': [],
+        'lon': [],
+        'region': [],
+        'address': [],
+        'type': [],
+        'size': [],
+        'preferences': [],
+        'proximity_schools': [],
+        'proximity_parks': [],
+        'owner_name': [],
+        'gender': [],
+        'is_student': [],
+        'current_people': [],
+        'max_people': [],
+        'same_sex_pref': [],
+    }
 
-# Define pages
+    preferences_options = ['Students', 'Professionals', 'Families', 'No preference']
+
+    for region, center in district_centers.items():
+        lats, lons = generate_coordinates(center, houses_per_district)
+        data['id'].extend(range(len(data['id']) + 1, len(data['id']) + houses_per_district + 1))
+        data['price'].extend(np.random.randint(500, 3000, houses_per_district))
+        data['transportation'].extend(np.random.randint(1, 10, houses_per_district))
+        data['shared_living'].extend(np.random.choice([True, False], houses_per_district))
+        data['lat'].extend(lats)
+        data['lon'].extend(lons)
+        data['region'].extend([region] * houses_per_district)
+        data['address'].extend([f"{region} Street {i}" for i in range(houses_per_district)])
+        data['type'].extend(np.random.choice(['Rent', 'Sale', 'Shared Housing'], houses_per_district))
+        data['size'].extend(np.random.randint(30, 200, houses_per_district))
+        data['preferences'].extend([np.random.choice(preferences_options, size=np.random.randint(1, len(preferences_options)+1), replace=False).tolist() for _ in range(houses_per_district)])
+        data['proximity_schools'].extend(np.random.choice([True, False], houses_per_district))
+        data['proximity_parks'].extend(np.random.choice([True, False], houses_per_district))
+        data['owner_name'].extend([f"Owner {i}" for i in range(houses_per_district)])
+        data['gender'].extend(np.random.choice(['Male', 'Female', 'Divers', None], houses_per_district))
+        data['is_student'].extend(np.random.choice([True, False], houses_per_district))
+        data['current_people'].extend(np.random.randint(1, 5, houses_per_district))
+        data['max_people'].extend(np.random.randint(2, 6, houses_per_district))
+        data['same_sex_pref'].extend(np.random.choice(['Yes', 'No'], houses_per_district))
+
+    return pd.DataFrame(data)
+
+if 'houses' not in st.session_state:
+    st.session_state['houses'] = generate_mock_data()
+
+# Count houses per district
+def count_houses_per_district(houses):
+    district_counts = houses['region'].value_counts().reset_index()
+    district_counts.columns = ['District', 'Number of Houses']
+    return district_counts
+
+# Home Page
 def home_page():
     st.title("Welcome to the Multilingual Housing Assistant")
     st.markdown(
@@ -107,9 +194,7 @@ def home_page():
     if st.button("FAQ"):
         set_page("FAQ")
 
-
 # Profile Page
-
 def profile_page():
     st.title("Profile")
     st.markdown(
@@ -131,16 +216,17 @@ def profile_page():
     user_profile["phone"] = st.text_input("Phone Number", user_profile["phone"])
     user_profile["address"] = st.text_input("Current Address", user_profile["address"])
     user_profile["gender"] = st.multiselect(
-            "Gender",
-            ["Male", "Female", "Divers"]
-        )
+        "Gender",
+        ["Male", "Female", "Divers"],
+        default=[user_profile["gender"]] if user_profile["gender"] else []
+    )
     user_profile["age"] = st.selectbox("Age", range(18, 101),
         index=(user_profile["age"] - 18) if isinstance(user_profile["age"], int) else 0
     )
     user_profile["job"] = st.selectbox(
         "Are you a student or a professional?",
         ["", "Student", "Professional"],
-        index=["", "Student", "Professional"].index(user_profile["job"]),
+        index=["", "Student", "Professional"].index(user_profile["job"]) if user_profile["job"] in ["", "Student", "Professional"] else 0,
     ) 
     user_profile["monthly_income"] = st.number_input("Monthly Income (€)", min_value=0, value=int(user_profile.get("monthly_income", 0)))
 
@@ -162,7 +248,7 @@ def profile_page():
         st.session_state["current_page"] = "Home"
         st.experimental_rerun()
 
-# Placeholder for Offer a House Page
+# Offer a House Page
 def offer_a_house_page():
     st.title("Offer a House")
     st.markdown("Provide details about your property below:")
@@ -171,7 +257,7 @@ def offer_a_house_page():
 
     # Property details form
     property_type = st.selectbox("Is this property for Rent, Sale, or Shared Housing?", ["Rent", "Sale", "Shared Housing"])
-    owner_name = st.text_input("owner_name")
+    owner_name = st.text_input("Owner Name")
     address = st.text_input("Address")
     size = st.number_input("Size (in sq. meters)", min_value=0)
     price = st.number_input("Price (€)", min_value=0)
@@ -183,10 +269,10 @@ def offer_a_house_page():
     # Shared housing specific details
     shared_housing_details = {}
     if property_type == "Shared Housing":
-        gender = st.radio("Your Gender", ["Male", "Female"])
+        gender = st.radio("Your Gender", ["Male", "Female", "Divers"])
         is_student = st.radio("Are you a student?", ["Yes", "No"]) == "Yes"
         current_people = st.number_input("Number of people currently living in the house", min_value=0, value=0)
-        max_people = st.number_input("Maximum number of people allowed", min_value=current_people + 1)
+        max_people = st.number_input("Maximum number of people allowed", min_value=int(current_people) + 1)
         same_sex_pref = st.radio("Same-sex preference?", ["Yes", "No"])
         shared_housing_details = {
             "gender": gender,
@@ -195,31 +281,41 @@ def offer_a_house_page():
             "max_people": max_people,
             "same_sex_pref": same_sex_pref,
         }
-        preferences = "Students"
+        preferences = ["Students"]
     else:
         preferences = st.multiselect(
             "Preferences",
             ["Students", "Professionals", "Families", "No preference"]
         )
 
-
     # Save to database button
     if st.button("Submit"):
         if address and size and price:
             # Create new property entry
             new_property = {
-                "type": property_type,
-                "address": address,
-                "size": size,
+                "id": st.session_state['houses']['id'].max() + 1 if len(st.session_state['houses']) > 0 else 1,
                 "price": price,
+                "transportation": np.random.randint(1, 10),
+                "shared_living": property_type == 'Shared Housing',
+                "lat": np.random.uniform(48.1, 48.2),
+                "lon": np.random.uniform(11.5, 11.7),
+                "region": 'Unknown',
+                "address": address,
+                "type": property_type,
+                "size": size,
                 "preferences": preferences,
                 "proximity_schools": proximity_schools,
                 "proximity_parks": proximity_parks,
-                "owner_name" : owner_name,
-                **shared_housing_details,
+                "owner_name": owner_name,
+                "gender": shared_housing_details.get('gender', None),
+                "is_student": shared_housing_details.get('is_student', None),
+                "current_people": shared_housing_details.get('current_people', None),
+                "max_people": shared_housing_details.get('max_people', None),
+                "same_sex_pref": shared_housing_details.get('same_sex_pref', None),
             }
 
-            st.session_state["properties"].append(new_property)
+            new_property_df = pd.DataFrame([new_property])
+            st.session_state['houses'] = pd.concat([st.session_state['houses'], new_property_df], ignore_index=True)
             st.success("Property added successfully!")
         else:
             st.error("Please fill in all required fields.")
@@ -275,8 +371,7 @@ def chat_page():
     if st.button("Back to Profile"):
         set_page("Profile")
 
-
-
+# AI Chat Assistant Page
 def ai_chat_assistant_page():
     st.title("AI Chat Assistant")
     st.session_state["step"] = 1
@@ -291,7 +386,7 @@ def ai_chat_assistant_page():
             st.markdown(prompt)
         st.session_state["ai_messages"].append({"role": "user", "content": prompt})
 
-        response =  st.session_state["chat_bot"].ask(prompt=prompt)
+        response = st.session_state["chat_bot"].ask(prompt=prompt)
         with st.chat_message("assistant"):
             st.markdown(response)
         st.session_state["ai_messages"].append({"role": "assistant", "content": response})
@@ -302,7 +397,6 @@ def ai_chat_assistant_page():
 
     if st.button("Back to Home"):
         set_page("Home")
-
 
 # Step-by-Step Guide
 def step_by_step_guide():
@@ -343,12 +437,11 @@ def step_by_step_guide():
             st.session_state["user_type"] = None
             st.experimental_rerun()
 
-
 # Professional Flow
 def professional_flow():
     st.title("Guide for Professionals")
     st.write("### Step 1: Are you looking to Rent or Buy?")
-    choice = st.radio("Select your preference:", ["Rent", "Buy"])
+    choice = st.radio("Select your preference:", ["Rent", "Sale"])
 
     if choice:
         st.write(f"### Step 2: Filter {choice.lower()} options")
@@ -358,7 +451,7 @@ def professional_flow():
             price_label = "Price per Month (€)"
             price_min_default = 0
             price_max_default = 4000
-        elif choice == "Buy":
+        elif choice == "Sale":
             price_label = "Price (€)"
             price_min_default = 0
             price_max_default = 1_000_000
@@ -371,22 +464,22 @@ def professional_flow():
 
         # Find matching properties
         if st.button("Find Matches"):
-            if "properties" in st.session_state:
+            if "houses" in st.session_state:
+                houses_df = st.session_state['houses']
                 # Filter properties
-                matching_properties = [
-                    prop for prop in st.session_state["properties"]
-                    if prop["type"].lower() == choice.lower()  # Match Rent/Buy
-                       and price_min <= prop["price"] <= price_max  # Match price range
-                       and size_min <= prop["size"] <= size_max  # Match size range
-                       and ("Professionals" in prop["preferences"] or "No preference" in prop["preferences"])
-                    # Match preference
+                matching_properties = houses_df[
+                    (houses_df['type'].str.lower() == choice.lower())
+                    & (houses_df['price'] >= price_min)
+                    & (houses_df['price'] <= price_max)
+                    & (houses_df['size'] >= size_min)
+                    & (houses_df['size'] <= size_max)
+                    & (houses_df['preferences'].apply(lambda x: 'Professionals' in x or 'No preference' in x))
                 ]
 
                 # Display matches
-                if matching_properties:
+                if not matching_properties.empty:
                     st.write(f"### Matching {choice.lower()} options:")
-                    cnt = 0
-                    for prop in matching_properties:
+                    for idx, prop in matching_properties.iterrows():
                         st.markdown(
                             f"""
                                 <div style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9;">
@@ -398,24 +491,11 @@ def professional_flow():
                                 </div>
                                 """,
                             unsafe_allow_html=True,
-                            
                         )
-                        if st.button(f"yaram{cnt}"):
-                             st.session_state["chat_messages"].append({
-                                "recipient": "John Doe",
-                                "message": "HI",
-                                "timestamp": "Just now",  # Mock timestamp
-                             })
-
-                        
-                        st.markdown("""---""")
-                        cnt+=1
-
                 else:
                     st.warning(f"No {choice.lower()} options found matching your criteria.")
             else:
                 st.error("No properties available in the database.")
-
 
 # Student Flow
 def student_flow():
@@ -437,32 +517,40 @@ def student_flow():
         elif choice == "Shared Housing":
             # Shared Housing-specific filtering
             # Gender and Same-Gender Preference
-            gender = st.radio("Your Gender", ["Male", "Female"])
+            gender = st.radio("Your Gender", ["Male", "Female", "Divers"])
             my_same_gender_pref = st.radio("Do you prefer same-gender housing?", ["Yes", "No"]) == "Yes"
             max_people = st.number_input("Maximum number of people wished", min_value=1, value=3)
             price_max = st.number_input("Maximum Price (€)", min_value=0, value=1000)
 
         # Find matches
         if st.button("Find Matches"):
-            if "properties" in st.session_state:
+            if "houses" in st.session_state:
+                houses_df = st.session_state['houses']
                 # Filter logic
-                matching_properties = [
-                    prop for prop in st.session_state["properties"]
-                    if prop["type"].lower() == choice.lower()  # Match Rent/Shared Housing
-                       and price_min <= prop["price"] <= price_max  # Match price
-                       and (not my_same_gender_pref or prop.get("gender") == gender)  # Match same gender if required
-                       and (not prop.get("same_gender_pref") or prop.get("gender") == gender)  # Match owner preference
-                       and (choice != "Shared Housing" or prop.get("is_student", False))  # Ensure offerer is student
-                       and (choice != "Shared Housing" or prop.get("current_people", 0) < prop.get("max_people", 1))    
-                       and ("Students" in prop["preferences"] or "No preference" in prop["preferences"])
-
-                    # Match people
-                ]
+                if choice == "Rent":
+                    matching_properties = houses_df[
+                        (houses_df['type'].str.lower() == choice.lower())
+                        & (houses_df['price'] >= price_min)
+                        & (houses_df['price'] <= price_max)
+                        & (houses_df['size'] >= size_min)
+                        & (houses_df['size'] <= size_max)
+                        & (houses_df['preferences'].apply(lambda x: 'Students' in x or 'No preference' in x))
+                    ]
+                elif choice == "Shared Housing":
+                    matching_properties = houses_df[
+                        (houses_df['type'].str.lower() == choice.lower())
+                        & (houses_df['price'] <= price_max)
+                        & ((houses_df['gender'] == gender) | (houses_df['same_sex_pref'] == 'No'))
+                        & ((houses_df['same_sex_pref'] == 'No') | (houses_df['gender'] == gender))
+                        & (houses_df['is_student'] == True)
+                        & (houses_df['current_people'] < houses_df['max_people'])
+                        & (houses_df['preferences'].apply(lambda x: 'Students' in x or 'No preference' in x))
+                    ]
 
                 # Display matches
-                if matching_properties:
+                if not matching_properties.empty:
                     st.write(f"### Matching {choice.lower()} options:")
-                    for prop in matching_properties:
+                    for idx, prop in matching_properties.iterrows():
                         st.markdown(
                             f"""
                                 <div style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9;">
@@ -480,18 +568,16 @@ def student_flow():
             else:
                 st.error("No properties available in the database.")
 
-
 # Family Flow
 def family_flow():
     st.title("Guide for Families")
     st.write("### Step 1: Are you looking for Rent or Buy?")
-    choice = st.radio("Select your preference:", ["Rent", "Buy"])
+    choice = st.radio("Select your preference:", ["Rent", "Sale"])
 
     if choice:
         st.write(f"### Step 2: Filter {choice.lower()} options")
 
         # Collect family-specific preferences
-        bedrooms = st.number_input("Minimum Number of Bedrooms", min_value=1, value=2)
         proximity_schools = st.radio("Do you need proximity to schools?", ["Yes", "No"]) == "Yes"
         proximity_parks = st.radio("Do you need proximity to parks?", ["Yes", "No"]) == "Yes"
         price_min = st.number_input("Minimum Price (€)", min_value=0, value=0)
@@ -501,22 +587,24 @@ def family_flow():
 
         # Find matches
         if st.button("Find Matches"):
-            if "properties" in st.session_state:
+            if "houses" in st.session_state:
+                houses_df = st.session_state['houses']
                 # Filter properties
-                matching_properties = [
-                    prop for prop in st.session_state["properties"]
-                    if prop["type"].lower() == choice.lower()  # Match Rent/Buy
-                    and price_min <= prop["price"] <= price_max  # Match price range
-                    and size_min <= prop["size"] <= size_max  # Match size range
-                    and ("Families" in prop["preferences"] or "No preference" in prop["preferences"])  # Match preference
-                    and (not proximity_schools or prop["proximity_schools"])  # Match school proximity
-                    and (not proximity_parks or prop["proximity_parks"])  # Match park proximity
+                matching_properties = houses_df[
+                    (houses_df['type'].str.lower() == choice.lower())
+                    & (houses_df['price'] >= price_min)
+                    & (houses_df['price'] <= price_max)
+                    & (houses_df['size'] >= size_min)
+                    & (houses_df['size'] <= size_max)
+                    & (houses_df['preferences'].apply(lambda x: 'Families' in x or 'No preference' in x))
+                    & ((~proximity_schools) | (houses_df['proximity_schools'] == True))
+                    & ((~proximity_parks) | (houses_df['proximity_parks'] == True))
                 ]
 
                 # Display matches
-                if matching_properties:
+                if not matching_properties.empty:
                     st.write(f"### Matching {choice.lower()} options:")
-                    for prop in matching_properties:
+                    for idx, prop in matching_properties.iterrows():
                         st.markdown(
                             f"""
                             <div style="border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin-bottom: 10px; background-color: #f9f9f9;">
@@ -535,8 +623,6 @@ def family_flow():
                     st.warning(f"No {choice.lower()} options found matching your criteria.")
             else:
                 st.error("No properties available in the database.")
-
-
 
 # Financial Tools
 def financial_tools():
@@ -588,96 +674,6 @@ def smart_recommendations():
     match_index = similarities[0].argmax()
     st.write(f"Best Match: {preferences.index[match_index]}")
 
-
-# Define district coordinates
-district_centers = {
-    'Altstadt-Lehel': [48.1371, 11.5753],
-    'Ludwigsvorstadt-Isarvorstadt': [48.1299, 11.5657],
-    'Maxvorstadt': [48.1517, 11.5675],
-    'Schwabing-West': [48.1597, 11.5542],
-    'Au-Haidhausen': [48.1288, 11.5934],
-    'Sendling': [48.1115, 11.5465],
-    'Sendling-Westpark': [48.1202, 11.5191],
-    'Schwanthalerhöhe': [48.1364, 11.5395],
-    'Neuhausen-Nymphenburg': [48.1540, 11.5216],
-    'Moosach': [48.1742, 11.4985],
-    'Milbertshofen-Am Hart': [48.1925, 11.5692],
-    'Schwabing-Freimann': [48.1723, 11.5887],
-    'Bogenhausen': [48.1530, 11.6097],
-    'Berg am Laim': [48.1266, 11.6351],
-    'Trudering-Riem': [48.1210, 11.6574],
-    'Ramersdorf-Perlach': [48.0988, 11.6229],
-    'Obergiesing-Fasangarten': [48.1002, 11.6015],
-    'Untergiesing-Harlaching': [48.0986, 11.5799],
-    'Thalkirchen-Obersendling-Forstenried-Fürstenried-Solln': [48.0965, 11.5232],
-    'Hadern': [48.1148, 11.4837],
-    'Pasing-Obermenzing': [48.1446, 11.4623],
-    'Aubing-Lochhausen-Langwied': [48.1661, 11.4022],
-    'Allach-Untermenzing': [48.1795, 11.4715],
-    'Feldmoching-Hasenbergl': [48.1942, 11.5420],
-    'Laim': [48.1338, 11.5103],
-}
-# Function to generate random coordinates near a district's center
-def generate_coordinates(center, num_points, radius=0.01):
-    latitudes = np.random.uniform(center[0] - radius, center[0] + radius, num_points)
-    longitudes = np.random.uniform(center[1] - radius, center[1] + radius, num_points)
-    return latitudes, longitudes
-
-# Generate mock housing data
-def generate_mock_data(houses_per_district=40):
-    data = {
-        'id': [],
-        'price': [],
-        'transportation': [],
-        'shared_living': [],
-        'lat': [],
-        'lon': [],
-        'region': [],
-        'address': []
-    }
-
-    for region, center in district_centers.items():
-        lats, lons = generate_coordinates(center, houses_per_district)
-        data['id'].extend(range(len(data['id']) + 1, len(data['id']) + houses_per_district + 1))
-        data['price'].extend(np.random.randint(500, 3000, houses_per_district))
-        data['transportation'].extend(np.random.randint(1, 10, houses_per_district))
-        data['shared_living'].extend(np.random.choice([True, False], houses_per_district))
-        data['lat'].extend(lats)
-        data['lon'].extend(lons)
-        data['region'].extend([region] * houses_per_district)
-        data['address'].extend([f"{region} Street {i}" for i in range(houses_per_district)])
-    
-    return pd.DataFrame(data)
-# Count houses per district
-def count_houses_per_district(houses):
-    district_counts = houses['region'].value_counts().reset_index()
-    district_counts.columns = ['District', 'Number of Houses']
-    return district_counts
-
-
-@st.cache_data  # Cache ranking results to avoid recomputation
-def rank_houses(houses, preferences):
-    houses['score'] = (
-        (1 - np.abs(houses['price'] - preferences['price']) / preferences['price']) * 0.5 +  # Weight: 50%
-        (houses['transportation'] / 10) * 0.3 +  # Weight: 30%
-        (houses['shared_living'] == preferences['shared_living']) * 0.2  # Weight: 20%
-    )
-    return houses.sort_values(by='score', ascending=False)
-
-
-def count_houses_per_district_with_filter(houses, preferences):
-    filtered_houses = houses[
-        (houses['price'] <= preferences['price']) &
-        (houses['transportation'] >= preferences['transportation']) &
-        (houses['shared_living'] == preferences['shared_living'])
-    ]
-    district_counts = filtered_houses['region'].value_counts().reset_index()
-    district_counts.columns = ['District', 'Number of Houses']
-    return district_counts
-
-
-# Main function for interactive visualization
-
 # Function to assess if the user can get the selected house
 def assess_user_for_house(user_profile, house):
     # Simple assessment logic:
@@ -692,8 +688,7 @@ def assess_user_for_house(user_profile, house):
     else:
         return False
 
-
-
+# Location Visualizer
 def location_visualizer():
     st.header("Interactive Location Visualizer")
 
@@ -704,8 +699,6 @@ def location_visualizer():
             'transportation': 7,
             'shared_living': True
         }
-    if 'houses' not in st.session_state:
-        st.session_state['houses'] = generate_mock_data()
     if 'selected_district' not in st.session_state:
         st.session_state['selected_district'] = None
     if 'selected_house' not in st.session_state:
@@ -847,8 +840,7 @@ def location_visualizer():
             "https://pictures.immobilienscout24.de/listings/3e105cc3-c939-4477-8c13-f1b82a73d992-1848432677.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
             "https://pictures.immobilienscout24.de/listings/df620cd6-dab3-47e7-9e68-d0fa806db4b1-1853516841.png/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
             "https://pictures.immobilienscout24.de/listings/a27cff34-0e19-48cc-b24a-9ee7db8974bf-1829425500.jpg/ORIG/legacy_thumbnail/420x315/format/jpg/quality/80",
-            ]
-        # Show the houses in the selected district
+        ]        # Show the houses in the selected district
         selected_district = st.session_state['selected_district']
         district_center = district_centers[selected_district]
         district_map = folium.Map(location=district_center, zoom_start=14)
@@ -923,7 +915,6 @@ def location_visualizer():
             st.session_state['selected_house'] = None
             st.experimental_rerun()
 
-
 # Quiz
 def quiz():
     st.header("Gamified Financial Education Quiz")
@@ -936,6 +927,7 @@ def quiz():
         else:
             st.error("Wrong answer. The correct answer is '3 months.'")
 
+# FAQ Page
 def faq_page():
     st.title("Frequently Asked Questions (FAQ)")
     st.markdown("Find answers to common questions below.")
@@ -974,8 +966,6 @@ def faq_page():
     if query and all(not [item for item in items if query in item["question"].lower()] for items in faqs.values()):
         st.warning("No FAQs found matching your search. Try a different query.")
 
-
-
 # Create a dictionary of pages for easy management
 pages = {
     "Home": home_page,
@@ -989,7 +979,6 @@ pages = {
     "Offer a House": offer_a_house_page,
     "FAQ": faq_page,
     "Chat": chat_page,
-
 }
 
 # Selectbox for navigation
@@ -1001,3 +990,4 @@ if page_selection != st.session_state["current_page"]:
 
 # Render the current page
 pages[st.session_state["current_page"]]()
+
