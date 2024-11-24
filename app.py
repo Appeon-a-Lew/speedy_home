@@ -509,7 +509,7 @@ def professional_flow():
                                 """,
                             unsafe_allow_html=True,
                         )
-                        if st.button(f"MJ {cnt}"):
+                        if st.button(f"Apply to {cnt}"):
                             st.session_state["chat_messages"].append({"recipient" : "John Doe", "message" : "Niggalodeaon", "timestamp" : "Just Now"})
                         cnt+=1
                             
