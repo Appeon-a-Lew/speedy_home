@@ -32,7 +32,7 @@ set_sidebar_style()
 st.sidebar.markdown("### 👤 Profile")
 if st.sidebar.button("Go to Profile"):
     st.session_state["current_page"] = "Profile"
-    st.experimental_rerun()
+    st.rerun()
 
 # Add a divider for better organization
 st.sidebar.markdown("---")
@@ -40,7 +40,7 @@ st.sidebar.markdown("---")
 # Helper function for page navigation
 def set_page(page_name):
     st.session_state["current_page"] = page_name
-    st.experimental_rerun()
+    st.rerun()
 
 # Helper function to update the current step
 def next_step(step):
@@ -105,6 +105,8 @@ district_centers = {
     'Feldmoching-Hasenbergl': [48.1942, 11.5420],
     'Laim': [48.1338, 11.5103],
 }
+if "homes" not in st.session_state:
+    st.session_state["homes"] = []
 
 # Function to generate random coordinates near a district's center
 def generate_coordinates(center, num_points, radius=0.01):
@@ -216,10 +218,9 @@ def profile_page():
     user_profile["phone"] = st.text_input("Phone Number", user_profile["phone"])
     user_profile["address"] = st.text_input("Current Address", user_profile["address"])
     user_profile["gender"] = st.multiselect(
-        "Gender",
-        ["Male", "Female", "Divers"],
-        default=[user_profile["gender"]] if user_profile["gender"] else []
-    )
+            "Gender",
+            ["Male", "Female", "Divers"]
+        )    
     user_profile["age"] = st.selectbox("Age", range(18, 101),
         index=(user_profile["age"] - 18) if isinstance(user_profile["age"], int) else 0
     )
@@ -241,12 +242,12 @@ def profile_page():
     # Button for landlords to offer a house
     if st.button("Offer a House"):
         st.session_state["current_page"] = "Offer a House"
-        st.experimental_rerun()
+        st.rerun()
 
     # Back button
     if st.button("Back to Home"):
         st.session_state["current_page"] = "Home"
-        st.experimental_rerun()
+        st.rerun()
 
 # Offer a House Page
 def offer_a_house_page():
@@ -319,6 +320,8 @@ def offer_a_house_page():
             st.success("Property added successfully!")
         else:
             st.error("Please fill in all required fields.")
+    if st.button("Back to Home"):
+        set_page("Home")
 
 # Chat Page
 def chat_page():
@@ -326,7 +329,7 @@ def chat_page():
     st.markdown("Send messages to other users.")
 
     # Select recipient (hardcoded user list for demo purposes)
-    recipients = ["John Doe", "Jane Smith", "Alex Brown"]
+    recipients = ["Marc the Guru", "John Doe", "Jane Smith", "Alex Brown", "T. Hofmann"]
     recipient = st.selectbox("Select recipient", recipients)
 
     # Message input
@@ -386,7 +389,10 @@ def ai_chat_assistant_page():
             st.markdown(prompt)
         st.session_state["ai_messages"].append({"role": "user", "content": prompt})
 
-        response = st.session_state["chat_bot"].ask(prompt=prompt)
+
+        homess = st.session_state["homes"]
+
+        response =  st.session_state["chat_bot"].ask(prompt=prompt,language = "English", context = homess, user = st.session_state["user_profile"])
         with st.chat_message("assistant"):
             st.markdown(response)
         st.session_state["ai_messages"].append({"role": "assistant", "content": response})
@@ -405,38 +411,38 @@ def step_by_step_guide():
 
     if st.session_state["step"] == 1:
         st.header("What best describes you?")
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3 , col4= st.columns(4)
         with col1:
             if st.button("Professional"):
                 set_user_type("Professional")
-                st.experimental_rerun()
+                st.rerun()
         with col2:
             if st.button("Student"):
                 set_user_type("Student")
-                st.experimental_rerun()
+                st.rerun()
         with col3:
             if st.button("Family"):
                 set_user_type("Family")
-                st.experimental_rerun()
+                st.rerun()
+        with col4:
+           if st.button("Back to Home"):
+                set_page("Home")
+
 
     # Step 2: Tailored flow based on user type
     elif st.session_state["step"] == 2:
         user_type = st.session_state["user_type"]
         st.subheader(f"You selected: {user_type}")
-
         if user_type == "Professional":
             professional_flow()
         elif user_type == "Student":
             student_flow()
         elif user_type == "Family":
             family_flow()
+    
 
         # Add a "Back" button
-        if st.button("Back"):
-            st.session_state["step"] = 1
-            st.session_state["user_type"] = None
-            st.experimental_rerun()
-
+        
 # Professional Flow
 def professional_flow():
     st.title("Guide for Professionals")
@@ -461,6 +467,11 @@ def professional_flow():
         price_max = st.number_input(f"Maximum {price_label}", min_value=0, value=price_max_default)
         size_min = st.number_input("Minimum Size (sq. meters)", min_value=0, value=0)
         size_max = st.number_input("Maximum Size (sq. meters)", min_value=0, value=300)
+        if st.button("Back"):
+            st.session_state["step"] = 1
+            st.session_state["user_type"] = None
+            st.rerun()
+
 
         # Find matching properties
         if st.button("Find Matches"):
@@ -477,7 +488,9 @@ def professional_flow():
                 ]
 
                 # Display matches
+
                 if not matching_properties.empty:
+                    cnt = 0
                     st.write(f"### Matching {choice.lower()} options:")
                     for idx, prop in matching_properties.iterrows():
                         st.markdown(
@@ -492,6 +505,10 @@ def professional_flow():
                                 """,
                             unsafe_allow_html=True,
                         )
+                        if st.button(f"MJ {cnt}"):
+                            st.session_state["chat_messages"].append({"recipient" : "John Doe", "message" : "Niggalodeaon", "timestamp" : "Just Now"})
+                        cnt+=1
+                            
                 else:
                     st.warning(f"No {choice.lower()} options found matching your criteria.")
             else:
@@ -521,6 +538,10 @@ def student_flow():
             my_same_gender_pref = st.radio("Do you prefer same-gender housing?", ["Yes", "No"]) == "Yes"
             max_people = st.number_input("Maximum number of people wished", min_value=1, value=3)
             price_max = st.number_input("Maximum Price (€)", min_value=0, value=1000)
+        if st.button("Back"):
+            st.session_state["step"] = 1
+            st.session_state["user_type"] = None
+            st.rerun()
 
         # Find matches
         if st.button("Find Matches"):
@@ -584,6 +605,10 @@ def family_flow():
         price_max = st.number_input("Maximum Price (€)", min_value=0, value=5000)
         size_min = st.number_input("Minimum Size (sq. meters)", min_value=0, value=50)
         size_max = st.number_input("Maximum Size (sq. meters)", min_value=0, value=300)
+        if st.button("Back"):
+            st.session_state["step"] = 1
+            st.session_state["user_type"] = None
+            st.rerun()
 
         # Find matches
         if st.button("Find Matches"):
@@ -684,6 +709,8 @@ def assess_user_for_house(user_profile, house):
     user_age = user_profile.get('age', 0)
 
     if user_income >= required_income and user_age >= 18:
+        st.session_state["homes"].append(str(house))
+        print(st.session_state["homes"])
         return True
     else:
         return False
@@ -907,13 +934,13 @@ def location_visualizer():
             # Option to go back to the map view
             if st.button("Back to Map"):
                 st.session_state['selected_house'] = None
-                st.experimental_rerun()
+                st.rerun()
 
         # Option to go back to district view
         if st.button("Back to Districts"):
             st.session_state['selected_district'] = None
             st.session_state['selected_house'] = None
-            st.experimental_rerun()
+            st.rerun()
 
 # Quiz
 def quiz():
